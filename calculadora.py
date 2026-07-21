@@ -1,166 +1,153 @@
 import customtkinter as ctk
 
-# Configurações de Design Deluxe
-ctk.set_appearance_mode("dark")  # Modo escuro moderno
+ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 class CalculadoraPremios(ctk.CTk):
     def __init__(self):
         super().__init__()
-
-        # Configurações da Janela (Pequena e otimizada)
+        
         self.title("Calculadora de Prêmios")
-        self.geometry("450x700")
-        self.resizable(False, False) # Impede redimensionamento para não quebrar o layout
+        # Janela super compacta, reduzida à metade da original e sem barra de rolagem
+        self.geometry("420x520")
+        self.resizable(False, False)
 
-        # Rodapé
-        self.rodape = ctk.CTkLabel(self, text="Criado por Matheus Carvalho", font=("Arial", 10), text_color="gray")
-        self.rodape.pack(side="bottom", pady=5)
+        self.rodape = ctk.CTkLabel(self, text="Criado por Matheus Carvalho", font=("Arial", 9), text_color="gray")
+        self.rodape.pack(side="bottom", pady=2)
 
-        # Abas
-        self.tabview = ctk.CTkTabview(self, corner_radius=10)
-        self.tabview.pack(padx=20, pady=10, fill="both", expand=True)
+        self.tabview = ctk.CTkTabview(self, corner_radius=8)
+        self.tabview.pack(padx=10, pady=0, fill="both", expand=True)
 
         self.aba_fianca = self.tabview.add("Cálculo Fiança")
         self.aba_vida = self.tabview.add("Cálculo Vida")
 
+        # Dicionário para armazenar as referências de cada linha de resultado
+        self.resultados_widgets = {}
+        
         self.montar_aba_fianca()
         self.montar_aba_vida()
 
     def formatar_moeda(self, valor):
-        # Formata float para padrão R$ 1.000,00
         return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
     def converter_para_float(self, string_valor):
-        # Limpa a string digitada para converter em número
         try:
             limpo = string_valor.replace("R$", "").replace(".", "").replace(",", ".").strip()
             return float(limpo)
         except ValueError:
             return 0.0
 
+    def copiar_valor(self, valor):
+        # Limpa a área de transferência e injeta o valor exato
+        self.clipboard_clear()
+        self.clipboard_append(valor)
+        self.update()
+
     def montar_aba_vida(self):
-        lbl_construcao = ctk.CTkLabel(
-            self.aba_vida, 
-            text="🚧 Em construção...", 
-            font=("Segoe UI", 24, "bold"),
-            text_color="#F39C12"
-        )
+        lbl_construcao = ctk.CTkLabel(self.aba_vida, text="🚧 Em construção...", font=("Segoe UI", 18, "bold"), text_color="#F39C12")
         lbl_construcao.pack(expand=True)
 
     def montar_aba_fianca(self):
-        # --- Entradas (Inputs) ---
-        frame_inputs = ctk.CTkFrame(self.aba_fianca, fg_color="transparent")
-        frame_inputs.pack(fill="x", pady=10)
+        # Frame de Entradas (Grid mais enxuto e compacto)
+        f_in = ctk.CTkFrame(self.aba_fianca, fg_color="transparent")
+        f_in.pack(fill="x", pady=5)
 
-        # Linha 1: Parcelas
-        self.ent_total_parcelas = ctk.CTkEntry(frame_inputs, placeholder_text="Total Parcelas Apólice")
-        self.ent_total_parcelas.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
-        
-        self.ent_parcelas_pagas = ctk.CTkEntry(frame_inputs, placeholder_text="Parcelas Pagas (2025)")
-        self.ent_parcelas_pagas.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+        self.e_tot_parc = ctk.CTkEntry(f_in, placeholder_text="Tot. Parc. Apólice", height=28)
+        self.e_tot_parc.grid(row=0, column=0, padx=3, pady=3, sticky="ew")
+        self.e_parc_pag = ctk.CTkEntry(f_in, placeholder_text="Parc. Pagas (2025)", height=28)
+        self.e_parc_pag.grid(row=0, column=1, padx=3, pady=3, sticky="ew")
 
-        # Linha 2: Prêmios
-        self.ent_premio_liq = ctk.CTkEntry(frame_inputs, placeholder_text="Prêmio Líquido das Parcelas")
-        self.ent_premio_liq.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
-        
-        self.ent_premio_total_parc = ctk.CTkEntry(frame_inputs, placeholder_text="Prêmio Total das Parcelas")
-        self.ent_premio_total_parc.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+        self.e_prem_liq = ctk.CTkEntry(f_in, placeholder_text="Prêmio Líq. Parc.", height=28)
+        self.e_prem_liq.grid(row=1, column=0, padx=3, pady=3, sticky="ew")
+        self.e_prem_tot = ctk.CTkEntry(f_in, placeholder_text="Prêmio Tot. Parc.", height=28)
+        self.e_prem_tot.grid(row=1, column=1, padx=3, pady=3, sticky="ew")
+        f_in.grid_columnconfigure((0, 1), weight=1)
 
-        frame_inputs.grid_columnconfigure((0, 1), weight=1)
+        btn_calc = ctk.CTkButton(self.aba_fianca, text="CALCULAR", height=30, font=("Segoe UI", 12, "bold"), command=self.calcular)
+        btn_calc.pack(pady=5, fill="x", padx=3)
 
-        # Botão de Calcular com animação de hover nativa
-        self.btn_calcular = ctk.CTkButton(
-            self.aba_fianca, 
-            text="CALCULAR", 
-            font=("Segoe UI", 14, "bold"),
-            height=40,
-            command=self.calcular_fianca
-        )
-        self.btn_calcular.pack(pady=15, fill="x", padx=5)
+        # Frame de Resultados 
+        f_out = ctk.CTkFrame(self.aba_fianca, fg_color="transparent")
+        f_out.pack(fill="both", expand=True)
 
-        # --- Saídas (Outputs) ---
-        self.frame_resultados = ctk.CTkScrollableFrame(self.aba_fianca, fg_color="transparent")
-        self.frame_resultados.pack(fill="both", expand=True)
+        def add_linha(chave, texto, cor, fonte):
+            # Cria uma linha espremida para poupar espaço vertical
+            linha = ctk.CTkFrame(f_out, fg_color="transparent", height=24)
+            linha.pack(fill="x", pady=1)
+            linha.pack_propagate(False) 
+            
+            lbl = ctk.CTkLabel(linha, text=f"{texto}: --", font=fonte, text_color=cor)
+            lbl.pack(side="left")
+            
+            # Botão de cópia individual
+            btn = ctk.CTkButton(linha, text="📋", width=26, height=20, font=("Segoe UI", 10), 
+                                fg_color="#333", hover_color="#555")
+            btn.pack(side="right")
+            
+            self.resultados_widgets[chave] = {"lbl": lbl, "btn": btn, "texto": texto}
 
-        # Destaques
-        self.lbl_destaque_liq = ctk.CTkLabel(self.frame_resultados, text="Prêmio Líquido Atual: R$ 0,00", font=("Segoe UI", 18, "bold"), text_color="#2ECC71")
-        self.lbl_destaque_liq.pack(pady=5, anchor="w")
-        
-        self.lbl_destaque_tot = ctk.CTkLabel(self.frame_resultados, text="Prêmio Total: R$ 0,00", font=("Segoe UI", 18, "bold"), text_color="#3498DB")
-        self.lbl_destaque_tot.pack(pady=5, anchor="w")
+        fonte_destaque = ("Segoe UI", 14, "bold")
+        fonte_normal = ("Segoe UI", 12)
 
-        # Divisória
-        ctk.CTkFrame(self.frame_resultados, height=2, fg_color="gray").pack(fill="x", pady=10)
+        # Inserindo todas as linhas
+        add_linha("liq_atual", "Prêmio Líq. Atual", "#2ECC71", fonte_destaque)
+        add_linha("tot", "Prêmio Total", "#3498DB", fonte_destaque)
+        
+        ctk.CTkFrame(f_out, height=1, fg_color="#444").pack(fill="x", pady=4)
+        
+        add_linha("qtd", "Qtd de Parcelas", "white", fonte_normal)
+        add_linha("mid", "Parcela Inicial MID", "white", fonte_normal)
+        add_linha("liq_apo", "Prêmio líq. apólice", "white", fonte_normal)
+        add_linha("iof", "IOF (7,38%)", "white", fonte_normal)
+        add_linha("tot_apo", "Prêmio total apólice", "white", fonte_normal)
+        add_linha("dif", "Diferença de Prêmios", "white", fonte_normal)
+        add_linha("iof_atual", "IOF atual", "white", fonte_normal)
 
-        # Outros resultados
-        font_res = ("Segoe UI", 13)
-        self.lbl_qtd_parcelas = ctk.CTkLabel(self.frame_resultados, text="Qtd de Parcelas: 0", font=font_res)
-        self.lbl_qtd_parcelas.pack(anchor="w")
-        
-        self.lbl_parc_inicial = ctk.CTkLabel(self.frame_resultados, text="Parcela Inicial MID: 0", font=font_res)
-        self.lbl_parc_inicial.pack(anchor="w")
-        
-        self.lbl_premio_liq_apolice = ctk.CTkLabel(self.frame_resultados, text="Prêmio líquido apólice: R$ 0,00", font=font_res)
-        self.lbl_premio_liq_apolice.pack(anchor="w")
-        
-        self.lbl_iof = ctk.CTkLabel(self.frame_resultados, text="IOF: R$ 0,00", font=font_res)
-        self.lbl_iof.pack(anchor="w")
-        
-        self.lbl_premio_tot_apolice = ctk.CTkLabel(self.frame_resultados, text="Prêmio total apólice: R$ 0,00", font=font_res)
-        self.lbl_premio_tot_apolice.pack(anchor="w")
-        
-        self.lbl_diferenca = ctk.CTkLabel(self.frame_resultados, text="Diferença de Prêmios: R$ 0,00", font=font_res)
-        self.lbl_diferenca.pack(anchor="w")
-        
-        self.lbl_iof_atual = ctk.CTkLabel(self.frame_resultados, text="IOF atual: R$ 0,00", font=font_res)
-        self.lbl_iof_atual.pack(anchor="w")
+    def atualizar_linha(self, chave, valor_str):
+        # Atualiza o texto visual e embute o valor exato no botão de cópia
+        w = self.resultados_widgets[chave]
+        w["lbl"].configure(text=f"{w['texto']}: {valor_str}")
+        w["btn"].configure(command=lambda v=valor_str: self.copiar_valor(v))
 
-    def calcular_fianca(self):
+    def calcular(self):
         try:
-            # Coleta de dados
-            tot_parcelas = int(self.ent_total_parcelas.get() or 0)
-            parc_pagas = int(self.ent_parcelas_pagas.get() or 0)
-            premio_liq_parc = self.converter_para_float(self.ent_premio_liq.get())
-            premio_tot_parc = self.converter_para_float(self.ent_premio_total_parc.get())
+            tot_parcelas = int(self.e_tot_parc.get() or 0)
+            parc_pagas = int(self.e_parc_pag.get() or 0)
+            p_liq_parc = self.converter_para_float(self.e_prem_liq.get())
+            p_tot_parc = self.converter_para_float(self.e_prem_tot.get())
 
-            # Formata os campos de entrada para manter o padrão R$ na tela
-            self.ent_premio_liq.delete(0, 'end')
-            self.ent_premio_liq.insert(0, self.formatar_moeda(premio_liq_parc))
-            self.ent_premio_total_parc.delete(0, 'end')
-            self.ent_premio_total_parc.insert(0, self.formatar_moeda(premio_tot_parc))
+            # Devolve a formatação para os inputs
+            self.e_prem_liq.delete(0, 'end')
+            self.e_prem_liq.insert(0, self.formatar_moeda(p_liq_parc))
+            self.e_prem_tot.delete(0, 'end')
+            self.e_prem_tot.insert(0, self.formatar_moeda(p_tot_parc))
 
-            # Cálculos exatos conforme solicitado
-            qtd_parcelas = tot_parcelas - parc_pagas
-            parc_inicial_mid = parc_pagas + 1
+            # Cálculos
+            qtd = tot_parcelas - parc_pagas
+            mid = parc_pagas + 1
+            liq_apo = p_liq_parc * qtd
+            iof = (liq_apo * 7.38) / 100
+            tot_apo = liq_apo + iof
+            tot = p_tot_parc * qtd
+            dif = tot - tot_apo
+            liq_atual = liq_apo + dif
+            iof_atual = tot - liq_atual
+
+            # Atualiza os painéis visuais e os botões de copiar
+            self.atualizar_linha("qtd", str(qtd))
+            self.atualizar_linha("mid", str(mid))
+            self.atualizar_linha("liq_apo", self.formatar_moeda(liq_apo))
+            self.atualizar_linha("iof", self.formatar_moeda(iof))
+            self.atualizar_linha("tot_apo", self.formatar_moeda(tot_apo))
+            self.atualizar_linha("dif", self.formatar_moeda(dif))
+            self.atualizar_linha("iof_atual", self.formatar_moeda(iof_atual))
             
-            premio_liq_apolice = premio_liq_parc * qtd_parcelas
-            iof = (premio_liq_apolice * 7.38) / 100
-            premio_tot_apolice = premio_liq_apolice + iof
+            self.atualizar_linha("liq_atual", self.formatar_moeda(liq_atual))
+            self.atualizar_linha("tot", self.formatar_moeda(tot))
+
+        except Exception:
+            self.resultados_widgets["liq_atual"]["lbl"].configure(text="Erro: Verifique os números preenchidos.")
             
-            premio_total = premio_tot_parc * qtd_parcelas
-            diferenca_premios = premio_total - premio_tot_apolice
-            
-            premio_liq_atual = premio_liq_apolice + diferenca_premios
-            iof_atual = premio_total - premio_liq_atual
-
-            # Atualização da Interface
-            self.lbl_qtd_parcelas.configure(text=f"Qtd de Parcelas: {qtd_parcelas}")
-            self.lbl_parc_inicial.configure(text=f"Parcela Inicial MID: {parc_inicial_mid}")
-            
-            self.lbl_premio_liq_apolice.configure(text=f"Prêmio líquido apólice: {self.formatar_moeda(premio_liq_apolice)}")
-            self.lbl_iof.configure(text=f"IOF (7,38%): {self.formatar_moeda(iof)}")
-            self.lbl_premio_tot_apolice.configure(text=f"Prêmio total apólice: {self.formatar_moeda(premio_tot_apolice)}")
-            self.lbl_diferenca.configure(text=f"Diferença de Prêmios: {self.formatar_moeda(diferenca_premios)}")
-            self.lbl_iof_atual.configure(text=f"IOF atual: {self.formatar_moeda(iof_atual)}")
-
-            # Destaques
-            self.lbl_destaque_liq.configure(text=f"Prêmio Líq. Atual: {self.formatar_moeda(premio_liq_atual)}")
-            self.lbl_destaque_tot.configure(text=f"Prêmio Total: {self.formatar_moeda(premio_total)}")
-
-        except Exception as e:
-            self.lbl_destaque_tot.configure(text="Erro: Verifique os números", text_color="red")
-
 if __name__ == "__main__":
     app = CalculadoraPremios()
     app.mainloop()
